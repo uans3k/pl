@@ -81,6 +81,7 @@ func (l *lexer) handleFuncCalls(funcCalls []string) (skip bool){
 			skip = true
 		case "Row":
 			l.row++
+			l.col=0
 		}
 	}
 	return 
@@ -133,12 +134,13 @@ sEnd:
 				goto sInit
 			}
 		}
+		col := l.col
 		l.col++
 		return &runtime.Token{
 			Value : newTokenValue(tokenStr),
 			Type  : acceptTokenType,
 			Row	  : l.row,
-			Column: l.col,
+			Column: col,
 		},nil
 	}else if err!=nil{
 		return nil,err

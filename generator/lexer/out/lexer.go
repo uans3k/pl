@@ -99,6 +99,7 @@ func (l *lexer) handleFuncCalls(funcCalls []string) (skip bool){
 			skip = true
 		case "Row":
 			l.row++
+			l.col=0
 		}
 	}
 	return 
@@ -129,16 +130,16 @@ s0:
 	case   48 :
 		goto s1
 	
+	case   49 :
+		goto s2
+	
 	case   97  , 98  , 99 :
 		goto s3
 	
 	case   10 :
 		goto s4
 	
-	case   49 :
-		goto s2
-	
-	case   9  , 32 :
+	case   32  , 9 :
 		goto s5
 	
 	default:
@@ -192,7 +193,7 @@ s3:
 	}
 	switch char {
     
-	case   97  , 98  , 48  , 49  , 99 :
+	case   48  , 98  , 97  , 99  , 49 :
 		goto s3
 	
 	default:
@@ -249,12 +250,13 @@ sEnd:
 				goto sInit
 			}
 		}
+		col := l.col
 		l.col++
 		return &runtime.Token{
 			Value : newTokenValue(tokenStr),
 			Type  : acceptTokenType,
 			Row	  : l.row,
-			Column: l.col,
+			Column: col,
 		},nil
 	}else if err!=nil{
 		return nil,err

@@ -3,6 +3,7 @@ package fa
 import (
 	"bufio"
 	"github.com/pkg/errors"
+	"github.com/uans3k/pl/infra"
 	"io"
 	"strings"
 )
@@ -12,6 +13,10 @@ type CharType int64
 const (
 	CharTypeNormal    CharType = 0
 	CharTypeEliminate CharType = 1
+)
+
+var (
+	builtinInFuncCalls = infra.NewSet("Hidden", "Row")
 )
 
 type TokenType struct {
@@ -141,6 +146,7 @@ func (n *NFA) parseLine() (startState, endState int, err error) {
 		// funcCalls
 		funcCalls, err = n.parseFuncCalls()
 	}
+	Assert(builtinInFuncCalls.ContainsAll(funcCalls), errors.Wrapf(UnknownFuncCall, "actual %+v", funcCalls))
 
 	n.row++
 	n.col = 0

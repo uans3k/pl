@@ -4,7 +4,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/uans3k/pl/generator/lexer/fa"
 	"github.com/uans3k/pl/generator/lexer/generator"
-	"github.com/uans3k/pl/infra"
 	"io"
 	"text/template"
 )
@@ -18,8 +17,6 @@ var (
 		Key:         "runtime",
 		Description: "generate file import runtime",
 	}
-
-	funcCalls = infra.NewSet("Hidden", "Row")
 )
 
 type lexerData struct {
@@ -56,6 +53,7 @@ func (g *golangBackend) Generate(minDFA *fa.MinDFA, writer io.Writer, config map
 	}
 	tokenType2FuncCalls := map[string][]string{}
 	for _, tokenType := range minDFA.AcceptState2TokenType {
+
 		tokenType2FuncCalls[tokenType.Name] = tokenType.FuncCalls
 	}
 	return tmpl.Execute(writer, &lexerData{

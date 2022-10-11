@@ -15,6 +15,7 @@ var (
 	InvalidStringChar    = errors.New("string must have a Char at least")
 	InvalidESCChar       = errors.New("invalid ESCChar . must be ['\\bfnrt]")
 	InvalidFunCalls      = errors.New("invalid FuncCalls. must be '{{' NAME (',' NAME)* '}}'")
+	UnknownFuncCall      = errors.New("unknown FuncCall")
 )
 
 func Assert(b bool, elseError error) {
