@@ -1,0 +1,29 @@
+lex ::= (line)*  EOF
+
+line ::= tokenType ':'  expr ';' funcCalls
+
+tokenType ::= NAME
+
+expr ::= term ('|' term)*
+
+term ::= piece+
+
+piece ::= factor QUANTIFIER?
+
+QUANTIFIER = [*?+]
+
+factor ::= string | '(' expr ')'
+
+string ::= ''' char+ '''
+
+char   ::=  SAFE_CHAR | ESC_CHAR
+
+funcCalls ::= ('{{' NAME (',' NAME)* '}}')?
+
+SAFE_CHAR ::= ~['\\]
+
+ESC_CHAR ::= '\' ['\\]
+
+NAME ::= [a-zA-Z_][0-9a-zA-Z_]*
+
+WHITE ::= ' ' | '\\' [tvrnf]
