@@ -66,6 +66,7 @@ type lexer struct{
 	stream runtime.CharStream
 	row  int
 	col  int
+	latestToken []rune
 }
 
 func NewLexer(stream runtime.CharStream) runtime.Lexer{
@@ -136,6 +137,7 @@ sEnd:
 		}
 		col := l.col
 		l.col++
+		l.latestToken = tokenStr
 		return &runtime.Token{
 			Value : newTokenValue(tokenStr),
 			Type  : acceptTokenType,
@@ -145,7 +147,7 @@ sEnd:
 	}else if err!=nil{
 		return nil,err
 	}else{
-		return nil,errors.WithStack(runtime.InvalidToken)
+		return nil,errors.Wrapf(runtime.InvalidToken,"[row : %d ,col :%d ,latest token :%s]",l.row,l.col,l.latestToken)
 	}
 }
 `

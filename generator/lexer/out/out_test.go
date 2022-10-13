@@ -24,7 +24,7 @@ func TestName(t *testing.T) {
 			So(err, ShouldBeNil)
 			tokens = append(tokens, token.Value.String())
 		}
-		So(len(tokens), ShouldEqual, 5)
 		fmt.Printf("%+v \n", tokens)
+		So(len(tokens), ShouldEqual, 7)
 	})
 }

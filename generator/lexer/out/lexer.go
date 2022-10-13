@@ -41,9 +41,13 @@ func (t *tokenValue) Chars() []rune{
 
 var(
 	
+	TokenType_left_b runtime.TokenType = newTokenType("left_b")
+	
 	TokenType_line runtime.TokenType = newTokenType("line")
 	
 	TokenType_number runtime.TokenType = newTokenType("number")
+	
+	TokenType_right_b runtime.TokenType = newTokenType("right_b")
 	
 	TokenType_string runtime.TokenType = newTokenType("string")
 	
@@ -51,22 +55,30 @@ var(
 	
 	acceptState2TokenType = map[int]runtime.TokenType{
 		
-			1 : TokenType_number,
+			1 : TokenType_left_b,
 		
-			2 : TokenType_number,
+			2 : TokenType_string,
 		
-			3 : TokenType_string,
+			3 : TokenType_white,
 		
-			4 : TokenType_line,
+			4 : TokenType_number,
 		
-			5 : TokenType_white,
+			5 : TokenType_number,
+		
+			6 : TokenType_line,
+		
+			7 : TokenType_right_b,
 		
 	}
 	tokenType2FuncCalls = map[runtime.TokenType][]string{
 		
+			TokenType_left_b :{  },
+		
 			TokenType_line :{ "Hidden","Row" },
 		
 			TokenType_number :{  },
+		
+			TokenType_right_b :{  },
 		
 			TokenType_string :{  },
 		
@@ -84,6 +96,7 @@ type lexer struct{
 	stream runtime.CharStream
 	row  int
 	col  int
+	latestToken []rune
 }
 
 func NewLexer(stream runtime.CharStream) runtime.Lexer{
@@ -127,20 +140,26 @@ s0:
 	}
 	switch char {
     
-	case   48 :
+	case   123 :
 		goto s1
 	
-	case   49 :
+	case   97  , 98  , 99 :
 		goto s2
 	
-	case   97  , 98  , 99 :
+	case   32  , 9 :
 		goto s3
 	
-	case   10 :
+	case   49 :
 		goto s4
 	
-	case   32  , 9 :
+	case   48 :
 		goto s5
+	
+	case   10 :
+		goto s6
+	
+	case   125 :
+		goto s7
 	
 	default:
 		goto sEnd
@@ -174,7 +193,7 @@ s2:
 	}
 	switch char {
     
-	case   48  , 49 :
+	case   98  , 97  , 49  , 48  , 99 :
 		goto s2
 	
 	default:
@@ -193,9 +212,6 @@ s3:
 	}
 	switch char {
     
-	case   48  , 98  , 97  , 99  , 49 :
-		goto s3
-	
 	default:
 		goto sEnd
 	}
@@ -212,6 +228,9 @@ s4:
 	}
 	switch char {
     
+	case   48  , 49 :
+		goto s4
+	
 	default:
 		goto sEnd
 	}
@@ -222,6 +241,38 @@ s5:
 		states = nil
 	}
     states = append(states,5)
+	char,err = l.stream.NextChar()
+	if err!=nil{
+		goto sEnd
+	}
+	switch char {
+    
+	default:
+		goto sEnd
+	}
+
+
+s6:
+	if accept(6){
+		states = nil
+	}
+    states = append(states,6)
+	char,err = l.stream.NextChar()
+	if err!=nil{
+		goto sEnd
+	}
+	switch char {
+    
+	default:
+		goto sEnd
+	}
+
+
+s7:
+	if accept(7){
+		states = nil
+	}
+    states = append(states,7)
 	char,err = l.stream.NextChar()
 	if err!=nil{
 		goto sEnd
@@ -252,6 +303,7 @@ sEnd:
 		}
 		col := l.col
 		l.col++
+		l.latestToken = tokenStr
 		return &runtime.Token{
 			Value : newTokenValue(tokenStr),
 			Type  : acceptTokenType,
@@ -261,6 +313,6 @@ sEnd:
 	}else if err!=nil{
 		return nil,err
 	}else{
-		return nil,errors.WithStack(runtime.InvalidToken)
+		return nil,errors.Wrapf(runtime.InvalidToken,"[row : %d ,col :%d ,latest token :%s]",l.row,l.col,l.latestToken)
 	}
 }

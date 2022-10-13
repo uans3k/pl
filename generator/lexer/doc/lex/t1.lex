@@ -4,6 +4,12 @@ white  : (' '|'\t')
 line   : '\n'
        ; {{ Hidden,Row }}
 
+left_b : '{'
+       ;
+
+right_b: '}'
+       ;
+
 string : ('a'|'b'|'c')('0'|'1'|'a'|'b'|'c')*
        ;
 
