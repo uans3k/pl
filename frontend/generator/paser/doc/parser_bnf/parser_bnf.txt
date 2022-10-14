@@ -1,0 +1,7 @@
+parser ::= (line)* EOF
+
+line ::= (NT|T)+ ';'
+
+NT ::= [A-Z][0-9a-zA-Z_]*
+
+nt ::= [a-z][0-9a-zA-Z_]*

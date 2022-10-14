@@ -147,7 +147,7 @@ sEnd:
 	}else if err!=nil{
 		return nil,err
 	}else{
-		return nil,errors.Wrapf(runtime.InvalidToken,"[row : %d ,col :%d ,latest token :%s]",l.row,l.col,l.latestToken)
+		return nil,errors.Wrapf(runtime.InvalidToken,"[row : %d ,col :%d ,latest token :%s]",l.row,l.col,string(l.latestToken))
 	}
 }
 `

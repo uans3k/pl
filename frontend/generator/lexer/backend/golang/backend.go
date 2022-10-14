@@ -2,8 +2,8 @@ package golang
 
 import (
 	"github.com/pkg/errors"
-	"github.com/uans3k/pl/generator/lexer/fa"
-	"github.com/uans3k/pl/generator/lexer/generator"
+	"github.com/uans3k/pl/frontend/generator/lexer/fa"
+	"github.com/uans3k/pl/frontend/generator/lexer/generator"
 	"io"
 	"text/template"
 )

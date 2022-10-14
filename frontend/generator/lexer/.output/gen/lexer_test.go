@@ -1,9 +1,9 @@
-package out
+package gen
 
 import (
 	"fmt"
 	. "github.com/smartystreets/goconvey/convey"
-	runtime "github.com/uans3k/pl/runtime/lexer"
+	runtime "github.com/uans3k/pl/frontend/runtime/lexer"
 	"io"
 	"os"
 	"testing"

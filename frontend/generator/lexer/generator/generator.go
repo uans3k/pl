@@ -2,7 +2,7 @@ package generator
 
 import (
 	"github.com/pkg/errors"
-	"github.com/uans3k/pl/generator/lexer/fa"
+	"github.com/uans3k/pl/frontend/generator/lexer/fa"
 	"io"
 )
 
