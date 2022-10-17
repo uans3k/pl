@@ -5,7 +5,7 @@ import (
 )
 
 type DFAEdge struct {
-	Char      rune
+	Char      Char
 	FromState int
 	ToState   int
 }
@@ -28,6 +28,11 @@ func NFA2DFA(nfa *NFA) *DFA {
 	return dfa
 }
 
+type char2StateSet struct {
+	Key2StateSet map[string]infra.Set[int]
+	Key2Char     map[string]Char
+}
+
 func (d *DFA) transform() {
 	var (
 		state2NFAStateSet      []infra.Set[int]
@@ -36,7 +41,7 @@ func (d *DFA) transform() {
 		curState               int
 		curNFAStateSet         infra.Set[int]
 		openList               []int
-		curStateDelta          map[rune]infra.Set[int]
+		curStateDelta          *char2StateSet
 		stateExist             bool
 		acceptState2TokenTypes = map[int][]*TokenType{}
 	)
@@ -49,7 +54,7 @@ func (d *DFA) transform() {
 		openList = openList[1:]
 		curNFAStateSet = state2NFAStateSet[curState]
 		curStateDelta = d.delta(curNFAStateSet)
-		for char, stateSet := range curStateDelta {
+		for key, stateSet := range curStateDelta.Key2StateSet {
 			nextNFAStateSet = d.eliminateClosure(stateSet)
 			if nextState, stateExist = d.exist(state2NFAStateSet, nextNFAStateSet); !stateExist {
 				nextState = d.nextEnableState()
@@ -60,7 +65,7 @@ func (d *DFA) transform() {
 				openList = append(openList, nextState)
 			}
 			d.State2Edges[curState] = append(d.State2Edges[curState], &DFAEdge{
-				Char:      char,
+				Char:      curStateDelta.Key2Char[key],
 				FromState: curState,
 				ToState:   nextState,
 			})
@@ -112,7 +117,7 @@ func (d *DFA) eliminateClosure(stateSet infra.Set[int]) (closeSet infra.Set[int]
 		closeSet.Add(state)
 		edges := d.nfa.State2Edges[state]
 		for _, edge := range edges {
-			if edge.CharType == CharTypeEliminate {
+			if edge.Char.Equal(CharEliminate) {
 				exist := closeSet.AddIfNotExist(edge.ToState)
 				if !exist {
 					openList = append(openList, edge.ToState)
@@ -123,16 +128,21 @@ func (d *DFA) eliminateClosure(stateSet infra.Set[int]) (closeSet infra.Set[int]
 	return
 }
 
-func (d *DFA) delta(stateSet infra.Set[int]) (char2StateSet map[rune]infra.Set[int]) {
-	char2StateSet = map[rune]infra.Set[int]{}
+func (d *DFA) delta(stateSet infra.Set[int]) (stateDelta *char2StateSet) {
+	stateDelta = &char2StateSet{
+		Key2StateSet: map[string]infra.Set[int]{},
+		Key2Char:     map[string]Char{},
+	}
 	for state := range stateSet {
 		edges := d.nfa.State2Edges[state]
 		for _, edge := range edges {
-			if edge.CharType == CharTypeNormal {
-				set, ok := char2StateSet[edge.Char]
+			switch v := edge.Char.(type) {
+			case *CharSingle, *CharRange:
+				set, ok := stateDelta.Key2StateSet[v.Key()]
 				if !ok {
 					set = infra.NewSet[int]()
-					char2StateSet[edge.Char] = set
+					stateDelta.Key2StateSet[v.Key()] = set
+					stateDelta.Key2Char[v.Key()] = v
 				}
 				set.Add(edge.ToState)
 			}

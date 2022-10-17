@@ -108,15 +108,12 @@ s{{$state}}:
 	if err!=nil{
 		goto sEnd
 	}
-	switch char {
-    {{ range $i,$edge := $edges }}
-	case {{ range $j,$char := $edge.Chars }} {{ if ne $j 0 }},{{ end }} {{$char}} {{ end }}:
+	{{if eq (len $edges) 0 }}goto sEnd{{ else }}
+	{{ range $i,$edge := $edges }}{{ if eq $i 0 }}if{{ else }}else if{{ end }}{{ range $j,$char := $edge.Chars }}{{ if ne $j 0 }}||{{ end }} {{CharCompare $char}} {{ end }}{
 		goto s{{$edge.ToState}}
-	{{ end }}
-	default:
+	}{{ end }}else{
 		goto sEnd
-	}
-
+	}{{ end }}
 {{ end }}
 
 sEnd:

@@ -1,17 +1,17 @@
-white  : (' '|'\t')
+White  : (' '|'\t')
        ; {{ Hidden }}
 
-line   : '\n'
+Line   : '\n'
        ; {{ Hidden,Row }}
 
-left_b : '{'
+Left_b : '{'
        ;
 
-right_b: '}'
+Right_b: '}'
        ;
 
-string : ('a'|'b'|'c')('0'|'1'|'a'|'b'|'c')*
+String : [a-zA-Z_][a-zA-Z0-9_]*
        ;
 
-number : '0' | '1' ('0'|'1')*
+Number : '0' | [1-9][0-9]*
        ;

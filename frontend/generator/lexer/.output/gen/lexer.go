@@ -41,48 +41,48 @@ func (t *tokenValue) Chars() []rune{
 
 var(
 	
-	TokenType_left_b runtime.TokenType = newTokenType("left_b")
+	TokenType_Left_b runtime.TokenType = newTokenType("Left_b")
 	
-	TokenType_line runtime.TokenType = newTokenType("line")
+	TokenType_Line runtime.TokenType = newTokenType("Line")
 	
-	TokenType_number runtime.TokenType = newTokenType("number")
+	TokenType_Number runtime.TokenType = newTokenType("Number")
 	
-	TokenType_right_b runtime.TokenType = newTokenType("right_b")
+	TokenType_Right_b runtime.TokenType = newTokenType("Right_b")
 	
-	TokenType_string runtime.TokenType = newTokenType("string")
+	TokenType_String runtime.TokenType = newTokenType("String")
 	
-	TokenType_white runtime.TokenType = newTokenType("white")
+	TokenType_White runtime.TokenType = newTokenType("White")
 	
 	acceptState2TokenType = map[int]runtime.TokenType{
 		
-			1 : TokenType_string,
+			1 : TokenType_String,
 		
-			2 : TokenType_left_b,
+			2 : TokenType_Number,
 		
-			3 : TokenType_right_b,
+			3 : TokenType_Number,
 		
-			4 : TokenType_line,
+			4 : TokenType_White,
 		
-			5 : TokenType_number,
+			5 : TokenType_Left_b,
 		
-			6 : TokenType_number,
+			6 : TokenType_Line,
 		
-			7 : TokenType_white,
+			7 : TokenType_Right_b,
 		
 	}
 	tokenType2FuncCalls = map[runtime.TokenType][]string{
 		
-			TokenType_left_b :{  },
+			TokenType_Left_b :{  },
 		
-			TokenType_line :{ "Hidden","Row" },
+			TokenType_Line :{ "Hidden","Row" },
 		
-			TokenType_number :{  },
+			TokenType_Number :{  },
 		
-			TokenType_right_b :{  },
+			TokenType_Right_b :{  },
 		
-			TokenType_string :{  },
+			TokenType_String :{  },
 		
-			TokenType_white :{ "Hidden" },
+			TokenType_White :{ "Hidden" },
 		
 	}
 )
@@ -138,33 +138,24 @@ s0:
 	if err!=nil{
 		goto sEnd
 	}
-	switch char {
-    
-	case   99  , 97  , 98 :
+	
+	if char == 95 || char >= 97 && char <= 122 || char >= 65 && char <= 90 {
 		goto s1
-	
-	case   123 :
+	}else if char == 48 {
 		goto s2
-	
-	case   125 :
-		goto s3
-	
-	case   10 :
+	}else if char == 32 || char == 9 {
 		goto s4
-	
-	case   48 :
+	}else if char == 123 {
 		goto s5
-	
-	case   49 :
+	}else if char >= 49 && char <= 57 {
+		goto s3
+	}else if char == 10 {
 		goto s6
-	
-	case   32  , 9 :
+	}else if char == 125 {
 		goto s7
-	
-	default:
+	}else{
 		goto sEnd
 	}
-
 
 s1:
 	if accept(1){
@@ -175,15 +166,12 @@ s1:
 	if err!=nil{
 		goto sEnd
 	}
-	switch char {
-    
-	case   48  , 49  , 99  , 98  , 97 :
-		goto s1
 	
-	default:
+	if char >= 97 && char <= 122 || char >= 65 && char <= 90 || char >= 48 && char <= 57 || char == 95 {
+		goto s1
+	}else{
 		goto sEnd
 	}
-
 
 s2:
 	if accept(2){
@@ -194,12 +182,7 @@ s2:
 	if err!=nil{
 		goto sEnd
 	}
-	switch char {
-    
-	default:
-		goto sEnd
-	}
-
+	goto sEnd
 
 s3:
 	if accept(3){
@@ -210,12 +193,12 @@ s3:
 	if err!=nil{
 		goto sEnd
 	}
-	switch char {
-    
-	default:
+	
+	if char >= 48 && char <= 57 {
+		goto s3
+	}else{
 		goto sEnd
 	}
-
 
 s4:
 	if accept(4){
@@ -226,12 +209,7 @@ s4:
 	if err!=nil{
 		goto sEnd
 	}
-	switch char {
-    
-	default:
-		goto sEnd
-	}
-
+	goto sEnd
 
 s5:
 	if accept(5){
@@ -242,12 +220,7 @@ s5:
 	if err!=nil{
 		goto sEnd
 	}
-	switch char {
-    
-	default:
-		goto sEnd
-	}
-
+	goto sEnd
 
 s6:
 	if accept(6){
@@ -258,15 +231,7 @@ s6:
 	if err!=nil{
 		goto sEnd
 	}
-	switch char {
-    
-	case   49  , 48 :
-		goto s6
-	
-	default:
-		goto sEnd
-	}
-
+	goto sEnd
 
 s7:
 	if accept(7){
@@ -277,12 +242,7 @@ s7:
 	if err!=nil{
 		goto sEnd
 	}
-	switch char {
-    
-	default:
-		goto sEnd
-	}
-
+	goto sEnd
 
 
 sEnd:

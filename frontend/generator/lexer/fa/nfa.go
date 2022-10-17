@@ -2,6 +2,7 @@ package fa
 
 import (
 	"bufio"
+	"fmt"
 	"github.com/pkg/errors"
 	"github.com/uans3k/pl/infra"
 	"io"
@@ -10,14 +11,67 @@ import (
 
 type CharType int64
 
-const (
-	CharTypeNormal    CharType = 0
-	CharTypeEliminate CharType = 1
-)
-
 var (
 	builtinInFuncCalls = infra.NewSet("Hidden", "Row")
 )
+
+type Char interface {
+	Equal(t Char) bool
+	Key() string
+}
+
+var CharEliminate Char = &charEliminate{}
+
+type charEliminate struct {
+}
+
+func (c *charEliminate) Key() string {
+	return ""
+}
+
+func (c *charEliminate) Equal(t Char) bool {
+	_, ok := t.(*charEliminate)
+	return ok
+}
+
+type CharSingle struct {
+	Char rune
+}
+
+func (c *CharSingle) Key() string {
+	return string(c.Char)
+}
+
+func NewCharSingle(char rune) Char {
+	return &CharSingle{Char: char}
+}
+
+func (c *CharSingle) Equal(t Char) bool {
+	if e, ok := t.(*CharSingle); ok {
+		return e.Char == c.Char
+	}
+	return false
+}
+
+type CharRange struct {
+	LeftChar  rune
+	RightChar rune
+}
+
+func (c *CharRange) Key() string {
+	return fmt.Sprintf("%c-%c", c.LeftChar, c.RightChar)
+}
+
+func NewCharRange(l, r rune) Char {
+	return &CharRange{LeftChar: l, RightChar: r}
+}
+
+func (c *CharRange) Equal(t Char) bool {
+	if e, ok := t.(*CharRange); ok {
+		return e.LeftChar == c.LeftChar && e.RightChar == c.RightChar
+	}
+	return false
+}
 
 type TokenType struct {
 	Name      string
@@ -30,8 +84,7 @@ func (t *TokenType) Equal(f *TokenType) bool {
 }
 
 type NFAEdge struct {
-	CharType  CharType
-	Char      rune
+	Char      Char
 	FromState int
 	ToState   int
 }
@@ -198,17 +251,24 @@ func (n *NFA) parseExpr() (startState, entState int) {
 
 func (n *NFA) addEliminateEdge(startState, endState int) {
 	n.State2Edges[startState] = append(n.State2Edges[startState], &NFAEdge{
-		CharType:  CharTypeEliminate,
-		Char:      0,
+		Char:      CharEliminate,
 		FromState: startState,
 		ToState:   endState,
 	})
 }
 
-func (n *NFA) addNormalEdge(startState, endState int, char rune) {
+func (n *NFA) addCharSingleEdge(startState, endState int, char rune) {
 	n.State2Edges[startState] = append(n.State2Edges[startState], &NFAEdge{
-		CharType:  CharTypeNormal,
-		Char:      char,
+		Char:      NewCharSingle(char),
+		FromState: startState,
+		ToState:   endState,
+	})
+}
+
+func (n *NFA) addCharRangeEdge(startState, endState int, leftChar, rightChar rune) {
+	Assert(leftChar <= rightChar, n.errorWithLocalChar(InvalidCharRange))
+	n.State2Edges[startState] = append(n.State2Edges[startState], &NFAEdge{
+		Char:      NewCharRange(leftChar, rightChar),
 		FromState: startState,
 		ToState:   endState,
 	})
@@ -217,6 +277,7 @@ func (n *NFA) addNormalEdge(startState, endState int, char rune) {
 // term ::= piece+
 func (n *NFA) parseTerm() (startState, endState int) {
 	var curState int
+	Assert(IsTermStart(n.curChar), n.errorWithLocalChar(InvalidTerm))
 	startState, curState = n.parsePiece()
 	for IsTermStart(n.curChar) {
 		pieceStartState, pieceEndState := n.parsePiece()
@@ -250,23 +311,51 @@ func (n *NFA) parsePiece() (startState, endState int) {
 	return
 }
 
-// factor ::= string | '(' expr ')'
+// factor ::= string | composed |'(' expr ')'
 func (n *NFA) parseFactor() (startState, endState int) {
 	if n.curChar == '(' {
 		n.nextChar()
 		startState, endState = n.parseExpr()
 		Assert(n.curChar == ')', n.errorWithLocalChar(InvalidFactorRParen))
 		n.nextChar()
+	} else if IsComposedStart(n.curChar) {
+		startState, endState = n.parseComposed()
 	} else {
 		startState, endState = n.parseString()
 	}
 	return
 }
 
+// composed ::= '[' (char '-' char | char)+']'
+func (n *NFA) parseComposed() (startState, endState int) {
+	Assert(IsComposedStart(n.curChar), n.errorWithLocalChar(InvalidComposed))
+	n.nextCharWithWhite()
+	startState = n.nextEnableState()
+	endState = n.nextEnableState()
+	Assert(n.curChar != ']', n.errorWithLocalChar(InvalidComposed))
+	for n.curChar != ']' {
+		leftChar := n.parseChar()
+		n.nextCharWithWhite()
+		if n.curChar == '-' {
+			n.nextCharWithWhite()
+			rightChar := n.parseChar()
+			n.addCharRangeEdge(startState, endState, leftChar, rightChar)
+			n.nextCharWithWhite()
+		} else {
+			n.addCharSingleEdge(startState, endState, leftChar)
+			if n.curChar != ']' {
+				n.addCharSingleEdge(startState, endState, n.curChar)
+				n.nextCharWithWhite()
+			}
+		}
+	}
+	Assert(n.curChar == ']', n.errorWithLocalChar(InvalidComposed))
+	n.nextChar()
+	return
+}
+
 // string ::= "'" Char+ "'"
-// Char   ::=  SAFE_CHAR | ESC_CHAR
-// SAFE_CHAR ::= ~['\\]
-// ESC_CHAR ::= '\' ['\\bfnrt]
+
 func (n *NFA) parseString() (startState, endState int) {
 	Assert(n.curChar == '\'', n.errorWithLocalChar(InvalidStringQuote))
 	startState = n.nextEnableState()
@@ -274,19 +363,27 @@ func (n *NFA) parseString() (startState, endState int) {
 	n.nextCharWithWhite()
 	Assert(n.curChar != '\'', n.errorWithLocalChar(InvalidStringChar))
 	for n.curChar != '\'' {
-		if n.curChar == '\\' { //esc Char
-			n.nextCharWithWhite()
-			n.curChar = n.escChar(n.curChar)
-		}
+		n.curChar = n.parseChar()
 		nextState := n.nextEnableState()
-		n.addNormalEdge(curState, nextState, n.curChar)
+		n.addCharSingleEdge(curState, nextState, n.curChar)
 		curState = nextState
 		n.nextCharWithWhite()
 	}
 	// '\''
 	endState = curState
 	n.nextChar()
-	return startState, endState
+	return
+}
+
+// Char   ::=  SAFE_CHAR | ESC_CHAR
+// SAFE_CHAR ::= ~['\\]
+// ESC_CHAR ::= '\' ['\\bfnrt]
+func (n *NFA) parseChar() rune {
+	if n.curChar == '\\' { //esc Char
+		n.nextCharWithWhite()
+		return n.escChar(n.curChar)
+	}
+	return n.curChar
 }
 
 // ESC_CHAR ::= '\' ['\\bfnrt]
@@ -338,23 +435,25 @@ func (n *NFA) parseFuncCalls() (funcCalls []string, err error) {
 	return
 }
 
-func IsTermStart(char rune) bool {
-	return char == '\'' || char == '('
+func IsComposedStart(char rune) bool {
+	return char == '['
 }
 
-// [a-zA-Z_]
+func IsTermStart(char rune) bool {
+	return char == '\'' || char == '(' || char == '['
+}
+
+// [A-Z]
 func IsNameStart(char rune) bool {
-	return char == '_' ||
-		char > 'a' || char < 'z' ||
-		char > 'A' || char < 'Z'
+	return char >= 'A' && char <= 'Z'
 }
 
 // [0-9a-zA-Z_]*
 func IsNameContinue(char rune) bool {
 	return char == '_' ||
-		(char > '0' && char < '9') ||
-		(char > 'a' && char < 'z') ||
-		(char > 'A' && char < 'Z')
+		(char >= '0' && char <= '9') ||
+		(char >= 'a' && char <= 'z') ||
+		(char >= 'A' && char <= 'Z')
 }
 
 func IsWhite(char rune) bool {

@@ -12,7 +12,9 @@ piece ::= factor QUANTIFIER?
 
 QUANTIFIER = [*?+]
 
-factor ::= string | '(' expr ')'
+factor ::= string | composed |'(' expr ')'
+
+composed ::= '[' (char '-' char | char)+']'
 
 string ::= ''' char+ '''
 

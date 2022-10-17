@@ -5,7 +5,7 @@ import (
 )
 
 type MinDFAEdge struct {
-	Chars   []rune
+	Chars   []Char
 	ToState int
 }
 
@@ -76,11 +76,20 @@ func (m *MinDFA) transform() {
 	}
 }
 
+func (m *MinDFA) existChar(chars []Char, t Char) bool {
+	for _, char := range chars {
+		if char.Equal(t) {
+			return true
+		}
+	}
+	return false
+}
+
 func (m *MinDFA) appendStateEdges(splitStates *SplitStates, stateEdges []*MinDFAEdge, dfaEdge *DFAEdge) (appendedStateEdges []*MinDFAEdge) {
 	toState := splitStates.DFAState2State[dfaEdge.ToState]
 	for _, stateEdge := range stateEdges {
 		if stateEdge.ToState == toState {
-			if !infra.SliceExist(stateEdge.Chars, dfaEdge.Char) {
+			if !m.existChar(stateEdge.Chars, dfaEdge.Char) {
 				stateEdge.Chars = append(stateEdge.Chars, dfaEdge.Char)
 			}
 			appendedStateEdges = stateEdges
@@ -88,7 +97,7 @@ func (m *MinDFA) appendStateEdges(splitStates *SplitStates, stateEdges []*MinDFA
 		}
 	}
 	appendedStateEdges = append(stateEdges, &MinDFAEdge{
-		Chars:   []rune{dfaEdge.Char},
+		Chars:   []Char{dfaEdge.Char},
 		ToState: toState,
 	})
 	return
@@ -144,13 +153,15 @@ func (m *MinDFA) initSplitStates() (splitStates *SplitStates, split bool) {
 
 func (m *MinDFA) split(splittingStates *SplitStates, splittingStateIndex int) (splitStates *SplitStates, split bool) {
 	var (
-		closeSet  = infra.NewSet[rune]()
-		splitChar rune
+		closeSet  = map[string]Char{}
+		splitChar Char
 	)
 	for _, dfaState := range splittingStates.State2DFAStates[splittingStateIndex] {
 		for _, edge := range m.dfa.State2Edges[dfaState] {
 			splitChar = edge.Char
-			if !closeSet.AddIfNotExist(splitChar) {
+			key := splitChar.Key()
+			if _, ok := closeSet[key]; !ok {
+				closeSet[key] = splitChar
 				splitStates, split = m.splitByChar(splittingStates, splittingStateIndex, splitChar)
 				if split {
 					return
@@ -174,7 +185,7 @@ func (m *MinDFA) noSplit(splittingStates *SplitStates, splittingStatesIndex int)
 	return
 }
 
-func (m *MinDFA) splitByChar(splittingStates *SplitStates, splittingStatesIndex int, splitChar rune) (nextSplitStates *SplitStates, split bool) {
+func (m *MinDFA) splitByChar(splittingStates *SplitStates, splittingStatesIndex int, splitChar Char) (nextSplitStates *SplitStates, split bool) {
 	splittingStateIndex2NextSplitStatesIndex := map[int]int{}
 	noCharStateIndex := -1
 	nextSplitStates = &SplitStates{
@@ -184,7 +195,7 @@ func (m *MinDFA) splitByChar(splittingStates *SplitStates, splittingStatesIndex 
 	for _, dfaState := range splittingStates.State2DFAStates[splittingStatesIndex] {
 		splittingStateIndex := noCharStateIndex
 		for _, edge := range m.dfa.State2Edges[dfaState] {
-			if edge.Char == splitChar {
+			if edge.Char.Equal(splitChar) {
 				splittingStateIndex = splittingStates.DFAState2State[edge.ToState]
 				m.appendNextSplitStates(nextSplitStates, dfaState, splittingStateIndex2NextSplitStatesIndex, splittingStateIndex)
 				break

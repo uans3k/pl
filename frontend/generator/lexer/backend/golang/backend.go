@@ -1,6 +1,7 @@
 package golang
 
 import (
+	"fmt"
 	"github.com/pkg/errors"
 	"github.com/uans3k/pl/frontend/generator/lexer/fa"
 	"github.com/uans3k/pl/frontend/generator/lexer/generator"
@@ -47,7 +48,18 @@ func (g *golangBackend) Generate(minDFA *fa.MinDFA, writer io.Writer, config map
 		return errors.Wrapf(generator.InvalidConfig, "%s must fill", RuntimeKeyConfig.Key)
 	}
 
-	tmpl, err := template.New("goLexerTemplate").Parse(goLexerTemplate)
+	tmpl, err := template.New("goLexerTemplate").Funcs(template.FuncMap{
+		"CharCompare": func(char fa.Char) string {
+			switch v := char.(type) {
+			case *fa.CharSingle:
+				return fmt.Sprintf("char == %d", v.Char)
+			case *fa.CharRange:
+				return fmt.Sprintf("char >= %d && char <= %d", v.LeftChar, v.RightChar)
+			default:
+				panic("unexpect char type")
+			}
+		},
+	}).Parse(goLexerTemplate)
 	if err != nil {
 		return err
 	}
