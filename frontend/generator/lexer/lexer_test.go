@@ -17,7 +17,9 @@ func TestLexer(t *testing.T) {
 		So(err, ShouldBeNil)
 		out, err := os.Create(".output/gen/lexer.go")
 		So(err, ShouldBeNil)
-		err = gen.Generate(in, out, map[string]string{
+		tokenOut, err := os.Create(".output/gen/lexer.token")
+		So(err, ShouldBeNil)
+		err = gen.Generate(in, out, tokenOut, map[string]string{
 			golang.PackageConfig.Key:    "gen",
 			golang.RuntimeKeyConfig.Key: "github.com/uans3k/pl/frontend/runtime/lexer",
 		})

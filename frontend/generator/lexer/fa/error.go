@@ -5,7 +5,6 @@ import (
 )
 
 var (
-	UnknownError         = errors.New("unknown error")
 	UnexpectEOF          = errors.New("unexpect a EOF")
 	InvalidTokenType     = errors.New("invalid TokenType . must be [A-Z][0-9a-zA-Z_]*")
 	InvalidLineColon     = errors.New("line expect a ':' after TokenType")
@@ -20,19 +19,3 @@ var (
 	InvalidFunCalls      = errors.New("invalid FuncCalls. must be '{{' NAME (',' NAME)* '}}'")
 	UnknownFuncCall      = errors.New("unknown FuncCall")
 )
-
-func Assert(b bool, elseError error) {
-	if !b {
-		panic(elseError)
-	}
-}
-
-func Catch(e *error) {
-	if r := recover(); r != nil {
-		if err, ok := r.(error); ok {
-			*e = err
-		} else {
-			*e = errors.Wrapf(UnknownError, "value :%+v", r)
-		}
-	}
-}

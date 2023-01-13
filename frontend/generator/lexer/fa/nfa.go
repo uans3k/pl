@@ -102,7 +102,7 @@ type NFA struct {
 }
 
 func ParseNFA(reader io.Reader) (n *NFA, e error) {
-	defer Catch(&e)
+	defer infra.Catch(&e)
 	n = &NFA{
 		reader:                bufio.NewReader(reader),
 		AcceptState2TokenType: map[int]*TokenType{},
@@ -162,13 +162,13 @@ func (n *NFA) nextCharWithEOF() (err error) {
 	if err == io.EOF {
 		return
 	}
-	Assert(err == nil, n.errorWithLocal(err))
+	infra.Assert(err == nil, n.errorWithLocal(err))
 	for IsWhite(n.curChar) {
 		n.curChar, _, err = n.reader.ReadRune()
 		if err == io.EOF {
 			return err
 		}
-		Assert(err == nil, n.errorWithLocal(err))
+		infra.Assert(err == nil, n.errorWithLocal(err))
 	}
 	return
 }
@@ -176,8 +176,8 @@ func (n *NFA) nextCharWithEOF() (err error) {
 func (n *NFA) nextCharWithWhite() {
 	var err error
 	n.curChar, _, err = n.reader.ReadRune()
-	Assert(err != io.EOF, n.errorWithLocal(UnexpectEOF))
-	Assert(err == nil, n.errorWithLocal(err))
+	infra.Assert(err != io.EOF, n.errorWithLocal(UnexpectEOF))
+	infra.Assert(err == nil, n.errorWithLocal(err))
 }
 
 // line ::= TokenType ':'  expr ';' funcCalls
@@ -185,21 +185,21 @@ func (n *NFA) parseLine() (startState, endState int, err error) {
 	tokenType := n.parseTokenType()
 
 	// ':'
-	Assert(n.curChar == ':', n.errorWithLocalChar(InvalidLineColon))
+	infra.Assert(n.curChar == ':', n.errorWithLocalChar(InvalidLineColon))
 	n.nextChar()
 
 	// expr
 	startState, endState = n.parseExpr()
 
 	// ';'
-	Assert(n.curChar == ';', n.errorWithLocalChar(InvalidLineSemicolon))
+	infra.Assert(n.curChar == ';', n.errorWithLocalChar(InvalidLineSemicolon))
 
 	var funcCalls []string
 	if err = n.nextCharWithEOF(); err == nil {
 		// funcCalls
 		funcCalls, err = n.parseFuncCalls()
 	}
-	Assert(builtinInFuncCalls.ContainsAll(funcCalls), errors.Wrapf(UnknownFuncCall, "actual %+v", funcCalls))
+	infra.Assert(builtinInFuncCalls.ContainsAll(funcCalls), errors.Wrapf(UnknownFuncCall, "actual %+v", funcCalls))
 
 	n.row++
 	n.col = 0
@@ -220,7 +220,7 @@ func (n *NFA) parseTokenType() (tokenType string) {
 
 // NAME ::= [a-zA-Z_][0-9a-zA-Z_]*
 func (n *NFA) parseName() string {
-	Assert(IsNameStart(n.curChar), errors.Wrapf(InvalidTokenType, ""))
+	infra.Assert(IsNameStart(n.curChar), errors.Wrapf(InvalidTokenType, ""))
 	sb := &strings.Builder{}
 	sb.WriteRune(n.curChar)
 	n.nextChar()
@@ -266,7 +266,7 @@ func (n *NFA) addCharSingleEdge(startState, endState int, char rune) {
 }
 
 func (n *NFA) addCharRangeEdge(startState, endState int, leftChar, rightChar rune) {
-	Assert(leftChar <= rightChar, n.errorWithLocalChar(InvalidCharRange))
+	infra.Assert(leftChar <= rightChar, n.errorWithLocalChar(InvalidCharRange))
 	n.State2Edges[startState] = append(n.State2Edges[startState], &NFAEdge{
 		Char:      NewCharRange(leftChar, rightChar),
 		FromState: startState,
@@ -277,7 +277,7 @@ func (n *NFA) addCharRangeEdge(startState, endState int, leftChar, rightChar run
 // term ::= piece+
 func (n *NFA) parseTerm() (startState, endState int) {
 	var curState int
-	Assert(IsTermStart(n.curChar), n.errorWithLocalChar(InvalidTerm))
+	infra.Assert(IsTermStart(n.curChar), n.errorWithLocalChar(InvalidTerm))
 	startState, curState = n.parsePiece()
 	for IsTermStart(n.curChar) {
 		pieceStartState, pieceEndState := n.parsePiece()
@@ -316,7 +316,7 @@ func (n *NFA) parseFactor() (startState, endState int) {
 	if n.curChar == '(' {
 		n.nextChar()
 		startState, endState = n.parseExpr()
-		Assert(n.curChar == ')', n.errorWithLocalChar(InvalidFactorRParen))
+		infra.Assert(n.curChar == ')', n.errorWithLocalChar(InvalidFactorRParen))
 		n.nextChar()
 	} else if IsComposedStart(n.curChar) {
 		startState, endState = n.parseComposed()
@@ -328,11 +328,11 @@ func (n *NFA) parseFactor() (startState, endState int) {
 
 // composed ::= '[' (char '-' char | char)+']'
 func (n *NFA) parseComposed() (startState, endState int) {
-	Assert(IsComposedStart(n.curChar), n.errorWithLocalChar(InvalidComposed))
+	infra.Assert(IsComposedStart(n.curChar), n.errorWithLocalChar(InvalidComposed))
 	n.nextCharWithWhite()
 	startState = n.nextEnableState()
 	endState = n.nextEnableState()
-	Assert(n.curChar != ']', n.errorWithLocalChar(InvalidComposed))
+	infra.Assert(n.curChar != ']', n.errorWithLocalChar(InvalidComposed))
 	for n.curChar != ']' {
 		leftChar := n.parseChar()
 		n.nextCharWithWhite()
@@ -349,7 +349,7 @@ func (n *NFA) parseComposed() (startState, endState int) {
 			}
 		}
 	}
-	Assert(n.curChar == ']', n.errorWithLocalChar(InvalidComposed))
+	infra.Assert(n.curChar == ']', n.errorWithLocalChar(InvalidComposed))
 	n.nextChar()
 	return
 }
@@ -357,11 +357,11 @@ func (n *NFA) parseComposed() (startState, endState int) {
 // string ::= "'" Char+ "'"
 
 func (n *NFA) parseString() (startState, endState int) {
-	Assert(n.curChar == '\'', n.errorWithLocalChar(InvalidStringQuote))
+	infra.Assert(n.curChar == '\'', n.errorWithLocalChar(InvalidStringQuote))
 	startState = n.nextEnableState()
 	curState := startState
 	n.nextCharWithWhite()
-	Assert(n.curChar != '\'', n.errorWithLocalChar(InvalidStringChar))
+	infra.Assert(n.curChar != '\'', n.errorWithLocalChar(InvalidStringChar))
 	for n.curChar != '\'' {
 		n.curChar = n.parseChar()
 		nextState := n.nextEnableState()
@@ -405,7 +405,7 @@ func (n *NFA) escChar(char rune) rune {
 	case 't':
 		return 9
 	default:
-		Assert(false, n.errorWithLocalChar(InvalidESCChar))
+		infra.Assert(false, n.errorWithLocalChar(InvalidESCChar))
 		return 0
 	}
 }
@@ -416,7 +416,7 @@ func (n *NFA) parseFuncCalls() (funcCalls []string, err error) {
 		return
 	}
 	n.nextCharWithWhite()
-	Assert('{' == n.curChar, n.errorWithLocalChar(InvalidFunCalls))
+	infra.Assert('{' == n.curChar, n.errorWithLocalChar(InvalidFunCalls))
 
 	n.nextChar()
 
@@ -427,9 +427,9 @@ func (n *NFA) parseFuncCalls() (funcCalls []string, err error) {
 		name = n.parseName()
 		funcCalls = append(funcCalls, name)
 	}
-	Assert('}' == n.curChar, n.errorWithLocalChar(InvalidFunCalls))
+	infra.Assert('}' == n.curChar, n.errorWithLocalChar(InvalidFunCalls))
 	n.nextCharWithWhite()
-	Assert('}' == n.curChar, n.errorWithLocalChar(InvalidFunCalls))
+	infra.Assert('}' == n.curChar, n.errorWithLocalChar(InvalidFunCalls))
 
 	err = n.nextCharWithEOF()
 	return

@@ -3,6 +3,7 @@ module github.com/uans3k/pl
 go 1.19
 
 require (
+	github.com/antlr/antlr4/runtime/Go/antlr v1.4.10
 	github.com/pkg/errors v0.9.1
 	github.com/smartystreets/goconvey v1.7.2
 )

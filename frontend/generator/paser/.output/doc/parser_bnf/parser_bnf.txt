@@ -1,0 +1,27 @@
+parser ::= startRule rule* EOF
+
+startRule := ruleRef ':' NT 'EOF' ';'
+
+rule ::= ruleRef ':' expr  ';'
+
+expr ::= term ('|' term)*
+
+term ::= piece+ | EPSILON
+
+piece ::= factor QUANTIFIER?
+
+factor ::= symbol |'(' expr ')'
+
+symbol ::= NT | T
+
+ruleRef ::= NT
+
+QUANTIFIER = [*?+]
+
+EPSILON ::= '#'
+
+NT ::= [a-z][0-9a-zA-Z_]*
+
+T ::= [A-Z][0-9a-zA-Z_]*
+
+WHITE ::= ' ' | '\\' [tvrnf]

@@ -9,50 +9,17 @@ import (
 	runtime "{{.Runtime}}"
 )
 
-type tokenType struct{
-	str string
-}
-
-func newTokenType(str string) runtime.TokenType{
-	return &tokenType{
-		str: str,
-	}
-}
-
-func(t *tokenType) String() string{
-	return t.str
-}
-
-type tokenValue struct{
-	chars []rune
-}
-
-func newTokenValue(chars []rune) runtime.TokenValue{
-	return &tokenValue{
-		chars: chars,
-	}
-}
-
-func (t *tokenValue) String() string{
-	return string(t.chars)
-}
-
-func (t *tokenValue) Chars() []rune{
-	return t.chars
-}
-
 var(
-	{{ range $tokenType,$b := .TokenTypes }}
-	TokenType_{{$tokenType}} runtime.TokenType = newTokenType("{{$tokenType}}")
+	{{ range $i,$tokenType := .TokenTypes }}
+	TokenType_{{$tokenType.Name}} runtime.TokenType = {{$i}}
 	{{ end }}
 	acceptState2TokenType = map[int]runtime.TokenType{
 		{{ range $state,$tokenType := .AcceptState2TokenType }}
 			{{$state}} : TokenType_{{$tokenType.Name}},
 		{{ end }}
 	}
-	tokenType2FuncCalls = map[runtime.TokenType][]string{
-		{{ range $tokenType,$funCalls := .TokenType2FuncCalls }}
-			TokenType_{{$tokenType}} :{ {{range $i,$funcCall :=$funCalls}}{{if ne $i 0}},{{end}}"{{$funcCall}}"{{end}} },
+	tokenType2FuncCalls = [][]string{
+		{{ range $i,$tokenType := .TokenTypes }}[]string{ {{ range $j,$funcCall := $tokenType.FuncCalls }} {{if ne $j 0}},{{end}}"{{$funcCall}}"{{ end }} },
 		{{ end }}
 	}
 )
@@ -88,7 +55,7 @@ func (l *lexer) handleFuncCalls(funcCalls []string) (skip bool){
 	return 
 }
 
-func (l *lexer) NextToken() (*runtime.Token,error){
+func (l *lexer) NextToken() (runtime.Token,error){
 sInit:
 	var(
     	badState 	= -1
@@ -109,7 +76,7 @@ s{{$state}}:
 		goto sEnd
 	}
 	{{if eq (len $edges) 0 }}goto sEnd{{ else }}
-	{{ range $i,$edge := $edges }}{{ if eq $i 0 }}if{{ else }}else if{{ end }}{{ range $j,$char := $edge.Chars }}{{ if ne $j 0 }}||{{ end }} {{CharCompare $char}} {{ end }}{
+	{{ range $i,$edge := $edges }}{{ if eq $i 0 }}if{{ else }}else if{{ end }}{{ range $j,$char := $edge.Chars }}{{ if ne $j 0 }}||{{ end }} {{$.CharCompare $char}} {{ end }}{
 		goto s{{$edge.ToState}}
 	}{{ end }}else{
 		goto sEnd
@@ -127,7 +94,7 @@ sEnd:
 	}
 	if acceptTokenType,ok:= acceptState2TokenType[curState];ok{
 		tokenStr:=l.stream.Consume()
-		if funcCalls,ok:=  tokenType2FuncCalls[acceptTokenType];ok{
+		if funcCalls:=  tokenType2FuncCalls[acceptTokenType];len(funcCalls)!=0{
 			if l.handleFuncCalls(funcCalls){
 				goto sInit
 			}
@@ -135,16 +102,15 @@ sEnd:
 		col := l.col
 		l.col++
 		l.latestToken = tokenStr
-		return &runtime.Token{
-			Value : newTokenValue(tokenStr),
-			Type  : acceptTokenType,
-			Row	  : l.row,
-			Column: col,
-		},nil
-	}else if err!=nil{
-		return nil,err
+		return runtime.NewToken(tokenStr,acceptTokenType,l.row,col),nil
+	}else if err==io.EOF{
+		return runtime.NewToken([]rune("EOF"),runtime.TokenType_EOF,l.row,l.col),nil
 	}else{
 		return nil,errors.Wrapf(runtime.InvalidToken,"[row : %d ,col :%d ,latest token :%s]",l.row,l.col,string(l.latestToken))
 	}
 }
+`
+
+var tokenTemplate = `{{ range $i,$tokenType := .TokenTypes }}{{$tokenType.Name}}={{$i}}
+{{ end }}
 `

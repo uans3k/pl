@@ -18,8 +18,28 @@ func (s Set[T]) AddIfNotExist(t T) (exist bool) {
 	return
 }
 
+func (s Set[T]) Union(t Set[T]) (intersect bool) {
+	for key := range t {
+		_, intersect = s[key]
+		s[key] = struct{}{}
+	}
+	return
+}
+
+func (s Set[T]) Clone() (t Set[T]) {
+	t = make(Set[T], len(s))
+	for key := range s {
+		t[key] = struct{}{}
+	}
+	return
+}
+
 func (s Set[T]) Add(t T) {
 	s[t] = struct{}{}
+}
+
+func (s Set[T]) Remove(m T) {
+	delete(s, m)
 }
 
 func (s Set[T]) Contains(t T) bool {
@@ -34,6 +54,16 @@ func (s Set[T]) ContainsAll(ts []T) bool {
 		}
 	}
 	return true
+}
+
+func (s Set[T]) Intersect(t Set[T]) (intersect bool) {
+	for key := range t {
+		_, intersect = s[key]
+		if intersect {
+			return
+		}
+	}
+	return
 }
 
 func (s Set[T]) Members() []T {

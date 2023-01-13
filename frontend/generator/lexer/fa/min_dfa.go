@@ -27,7 +27,7 @@ func (s *SplitStates) Append(t *SplitStates) {
 type MinDFA struct {
 	dfa                   *DFA
 	StartState            int
-	TokenTypes            map[string]bool
+	TokenTypes            []*TokenType
 	AcceptState2TokenType map[int]*TokenType
 	State2Edges           [][]*MinDFAEdge
 }
@@ -35,7 +35,6 @@ type MinDFA struct {
 func DFA2MinDFA(dfa *DFA) *MinDFA {
 	minDFA := &MinDFA{
 		dfa:                   dfa,
-		TokenTypes:            map[string]bool{},
 		AcceptState2TokenType: map[int]*TokenType{},
 	}
 	minDFA.transform()
@@ -66,14 +65,18 @@ func (m *MinDFA) transform() {
 			m.State2Edges[state] = stateEdges
 		}
 	}
+	name2TokenType := map[string]*TokenType{}
 	for acceptState, tokenTypes := range acceptState2TokenTypes {
 		infra.SliceSort(tokenTypes, func(left, right *TokenType) bool {
 			return left.Order < right.Order
 		})
 		tokenType := tokenTypes[0]
 		m.AcceptState2TokenType[acceptState] = tokenType
-		m.TokenTypes[tokenType.Name] = true
+		name2TokenType[tokenType.Name] = tokenType
 	}
+	m.TokenTypes = infra.MapSortV(name2TokenType, func(left, right *TokenType) bool {
+		return left.Order < right.Order
+	})
 }
 
 func (m *MinDFA) existChar(chars []Char, t Char) bool {

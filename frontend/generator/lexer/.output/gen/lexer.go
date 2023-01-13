@@ -7,82 +7,44 @@ import (
 	runtime "github.com/uans3k/pl/frontend/runtime/lexer"
 )
 
-type tokenType struct{
-	str string
-}
-
-func newTokenType(str string) runtime.TokenType{
-	return &tokenType{
-		str: str,
-	}
-}
-
-func(t *tokenType) String() string{
-	return t.str
-}
-
-type tokenValue struct{
-	chars []rune
-}
-
-func newTokenValue(chars []rune) runtime.TokenValue{
-	return &tokenValue{
-		chars: chars,
-	}
-}
-
-func (t *tokenValue) String() string{
-	return string(t.chars)
-}
-
-func (t *tokenValue) Chars() []rune{
-	return t.chars
-}
-
 var(
 	
-	TokenType_Left_b runtime.TokenType = newTokenType("Left_b")
+	TokenType_White runtime.TokenType = 0
 	
-	TokenType_Line runtime.TokenType = newTokenType("Line")
+	TokenType_Line runtime.TokenType = 1
 	
-	TokenType_Number runtime.TokenType = newTokenType("Number")
+	TokenType_Left_b runtime.TokenType = 2
 	
-	TokenType_Right_b runtime.TokenType = newTokenType("Right_b")
+	TokenType_Right_b runtime.TokenType = 3
 	
-	TokenType_String runtime.TokenType = newTokenType("String")
+	TokenType_String runtime.TokenType = 4
 	
-	TokenType_White runtime.TokenType = newTokenType("White")
+	TokenType_Number runtime.TokenType = 5
 	
 	acceptState2TokenType = map[int]runtime.TokenType{
 		
 			1 : TokenType_String,
 		
-			2 : TokenType_Number,
+			2 : TokenType_Left_b,
 		
 			3 : TokenType_Number,
 		
-			4 : TokenType_White,
+			4 : TokenType_Number,
 		
-			5 : TokenType_Left_b,
+			5 : TokenType_White,
 		
 			6 : TokenType_Line,
 		
 			7 : TokenType_Right_b,
 		
 	}
-	tokenType2FuncCalls = map[runtime.TokenType][]string{
-		
-			TokenType_Left_b :{  },
-		
-			TokenType_Line :{ "Hidden","Row" },
-		
-			TokenType_Number :{  },
-		
-			TokenType_Right_b :{  },
-		
-			TokenType_String :{  },
-		
-			TokenType_White :{ "Hidden" },
+	tokenType2FuncCalls = [][]string{
+		[]string{  "Hidden" },
+		[]string{  "Hidden" ,"Row" },
+		[]string{  },
+		[]string{  },
+		[]string{  },
+		[]string{  },
 		
 	}
 )
@@ -118,7 +80,7 @@ func (l *lexer) handleFuncCalls(funcCalls []string) (skip bool){
 	return 
 }
 
-func (l *lexer) NextToken() (*runtime.Token,error){
+func (l *lexer) NextToken() (runtime.Token,error){
 sInit:
 	var(
     	badState 	= -1
@@ -139,16 +101,16 @@ s0:
 		goto sEnd
 	}
 	
-	if char == 95 || char >= 97 && char <= 122 || char >= 65 && char <= 90 {
+	if char >= 97 && char <= 122 || char >= 65 && char <= 90 || char == 95 {
 		goto s1
-	}else if char == 48 {
-		goto s2
-	}else if char == 32 || char == 9 {
-		goto s4
 	}else if char == 123 {
-		goto s5
+		goto s2
 	}else if char >= 49 && char <= 57 {
 		goto s3
+	}else if char == 32 || char == 9 {
+		goto s5
+	}else if char == 48 {
+		goto s4
 	}else if char == 10 {
 		goto s6
 	}else if char == 125 {
@@ -167,7 +129,7 @@ s1:
 		goto sEnd
 	}
 	
-	if char >= 97 && char <= 122 || char >= 65 && char <= 90 || char >= 48 && char <= 57 || char == 95 {
+	if char == 95 || char >= 97 && char <= 122 || char >= 65 && char <= 90 || char >= 48 && char <= 57 {
 		goto s1
 	}else{
 		goto sEnd
@@ -256,7 +218,7 @@ sEnd:
 	}
 	if acceptTokenType,ok:= acceptState2TokenType[curState];ok{
 		tokenStr:=l.stream.Consume()
-		if funcCalls,ok:=  tokenType2FuncCalls[acceptTokenType];ok{
+		if funcCalls:=  tokenType2FuncCalls[acceptTokenType];len(funcCalls)!=0{
 			if l.handleFuncCalls(funcCalls){
 				goto sInit
 			}
@@ -264,14 +226,9 @@ sEnd:
 		col := l.col
 		l.col++
 		l.latestToken = tokenStr
-		return &runtime.Token{
-			Value : newTokenValue(tokenStr),
-			Type  : acceptTokenType,
-			Row	  : l.row,
-			Column: col,
-		},nil
-	}else if err!=nil{
-		return nil,err
+		return runtime.NewToken(tokenStr,acceptTokenType,l.row,col),nil
+	}else if err==io.EOF{
+		return runtime.NewToken([]rune("EOF"),runtime.TokenType_EOF,l.row,l.col),nil
 	}else{
 		return nil,errors.Wrapf(runtime.InvalidToken,"[row : %d ,col :%d ,latest token :%s]",l.row,l.col,string(l.latestToken))
 	}
